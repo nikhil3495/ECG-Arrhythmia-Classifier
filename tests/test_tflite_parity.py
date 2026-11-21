@@ -10,7 +10,7 @@ pytest.importorskip("litert_torch")
 
 from ecg_edge.data import BeatDataset
 from ecg_edge.evaluate import predict_torch
-from ecg_edge.models import build_model
+from ecg_edge.models import build_model, fold_rr_normalization
 from ecg_edge.preprocess import RR_FEATURE_NAMES
 from ecg_edge.quantize_export import export_fp32, export_int8
 from ecg_edge.runtime import LiteRTClassifier, softmax
@@ -48,9 +48,12 @@ def test_fp32_tflite_matches_pytorch(model_and_data, tmp_path: Path) -> None:
 
 def test_int8_tflite_is_full_integer_and_close(model_and_data, tmp_path: Path) -> None:
     model, ds = model_and_data
-    path = export_int8(model, ds, tmp_path / "m_int8.tflite")
+    path = export_int8(fold_rr_normalization(model), ds, tmp_path / "m_int8.tflite")
     clf = LiteRTClassifier(path)
+    # integer-only I/O: both inputs and the output are int8
     assert clf.input_dtype == np.int8
+    assert np.dtype(clf._rr["dtype"]) == np.int8
+    assert np.dtype(clf._out["dtype"]) == np.int8
     ref = softmax(predict_torch(model, ds.x, ds.rr))
     out = softmax(clf.predict_logits(ds.x, ds.rr))
     assert np.abs(out - ref).mean() < 0.05

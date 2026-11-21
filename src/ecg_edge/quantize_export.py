@@ -23,7 +23,7 @@ import torch
 
 from ecg_edge.data import BeatDataset, inter_patient_splits, load_dataset
 from ecg_edge.evaluate import compute_metrics, predict_torch
-from ecg_edge.models import ECGNet, load_checkpoint
+from ecg_edge.models import ECGNet, fold_rr_normalization, load_checkpoint
 from ecg_edge.preprocess import RR_FEATURE_NAMES
 from ecg_edge.runtime import LiteRTClassifier
 from ecg_edge.utils import CHECKPOINT_DIR, EXPORT_DIR, RESULTS_DIR, get_logger, load_config, save_json, set_seed
@@ -95,9 +95,10 @@ def export_variant(variant: str, ds: BeatDataset, cfg: dict[str, Any]) -> dict[s
         "litert_int8_dynamic": EXPORT_DIR / f"{variant}_int8_dynamic.tflite",
     }
     t0 = time.perf_counter()
-    export_fp32(model, paths["litert_fp32"])
-    export_int8(model, calib, paths["litert_int8"], dynamic=False)
-    export_int8(model, calib, paths["litert_int8_dynamic"], dynamic=True)
+    deploy = fold_rr_normalization(model)  # integer-only graph; PyTorch reference below stays unfolded
+    export_fp32(deploy, paths["litert_fp32"])
+    export_int8(deploy, calib, paths["litert_int8"], dynamic=False)
+    export_int8(deploy, calib, paths["litert_int8_dynamic"], dynamic=True)
     log.info("%s: exported 3 models in %.1fs", variant, time.perf_counter() - t0)
 
     torch_logits = predict_torch(model, test.x, test.rr)
