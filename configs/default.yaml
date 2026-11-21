@@ -25,7 +25,10 @@ train:
   protocol: inter        # inter | intra
   batch_size: 256
   epochs: 40
-  patience: 8            # early stopping on val macro-F1 (N,S,V,F)
+  patience: 8
+  # Early-stopping / model-selection signal: mean val F1 over these classes. F is excluded because
+  # DS1's F beats sit almost entirely in record 208 (kept in train), leaving 15 F beats in val.
+  select_classes: [N, S, V]
   lr: 0.002
   weight_decay: 0.0001
   class_weight_power: 0.5  # loss weight_c = (n_max / n_c) ** power, i.e. sqrt-inverse frequency

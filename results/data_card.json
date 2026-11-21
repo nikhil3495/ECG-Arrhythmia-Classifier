@@ -1,0 +1,139 @@
+{
+  "source": "MIT-BIH Arrhythmia Database (PhysioNet mitdb), lead MLII, 360 Hz",
+  "excluded_paced_records": [
+    102,
+    104,
+    107,
+    217
+  ],
+  "window_samples": 256,
+  "window": {
+    "before": 90,
+    "after": 166
+  },
+  "rr_features": [
+    "pre_rr",
+    "post_rr",
+    "local_rr",
+    "long_rr",
+    "pre_over_local",
+    "post_over_pre",
+    "pre_over_long",
+    "post_over_long"
+  ],
+  "total_beats": 100645,
+  "inter_patient": {
+    "train": {
+      "records": [
+        106,
+        108,
+        109,
+        112,
+        114,
+        115,
+        116,
+        119,
+        122,
+        124,
+        201,
+        205,
+        207,
+        208,
+        209,
+        215,
+        220,
+        230
+      ],
+      "n_beats": 41257,
+      "class_counts": {
+        "N": 37232,
+        "S": 769,
+        "V": 2855,
+        "F": 399,
+        "Q": 2
+      }
+    },
+    "val": {
+      "records": [
+        101,
+        118,
+        203,
+        223
+      ],
+      "n_beats": 9720,
+      "class_counts": {
+        "N": 8592,
+        "S": 174,
+        "V": 933,
+        "F": 15,
+        "Q": 6
+      }
+    },
+    "test": {
+      "records": [
+        100,
+        103,
+        105,
+        111,
+        113,
+        117,
+        121,
+        123,
+        200,
+        202,
+        210,
+        212,
+        213,
+        214,
+        219,
+        221,
+        222,
+        228,
+        231,
+        232,
+        233,
+        234
+      ],
+      "n_beats": 49668,
+      "class_counts": {
+        "N": 44218,
+        "S": 1836,
+        "V": 3219,
+        "F": 388,
+        "Q": 7
+      }
+    }
+  },
+  "intra_patient": {
+    "train": {
+      "n_beats": 72464,
+      "class_counts": {
+        "N": 64830,
+        "S": 2001,
+        "V": 5045,
+        "F": 577,
+        "Q": 11
+      }
+    },
+    "val": {
+      "n_beats": 8052,
+      "class_counts": {
+        "N": 7204,
+        "S": 222,
+        "V": 561,
+        "F": 64,
+        "Q": 1
+      }
+    },
+    "test": {
+      "n_beats": 20129,
+      "class_counts": {
+        "N": 18008,
+        "S": 556,
+        "V": 1401,
+        "F": 161,
+        "Q": 3
+      }
+    }
+  }
+}
