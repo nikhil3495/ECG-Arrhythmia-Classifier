@@ -31,7 +31,9 @@ train:
   select_classes: [N, S, V]
   lr: 0.002
   weight_decay: 0.0001
-  class_weight_power: 0.5  # loss weight_c = (n_max / n_c) ** power, i.e. sqrt-inverse frequency
+  # loss weight_c = (n_max / n_c) ** power -> 1.0 = inverse class frequency (capped). Chosen by the
+  # validation-only sweep in scripts/hparam_sweep.py (results/sweep_tiny.json); 0.5 under-detected S.
+  class_weight_power: 1.0
   max_class_weight: 50.0
   augment:
     scale: 0.15          # random amplitude scale in [1-s, 1+s]
