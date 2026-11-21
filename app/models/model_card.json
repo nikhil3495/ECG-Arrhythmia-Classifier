@@ -1,0 +1,21 @@
+{
+  "variant": "tiny",
+  "source": "tiny_int8.tflite",
+  "headline": {
+    "variant": "tiny",
+    "runtime": "litert_int8",
+    "accuracy": 0.8906338084883627,
+    "macro_f1": 0.5849842620942977,
+    "size_kb": 21.71875,
+    "p50_ms": 0.008396,
+    "pytorch_macro_f1": 0.5862841029849187,
+    "fp32_tflite_size_kb": 45.75390625
+  },
+  "classes": [
+    "N",
+    "S",
+    "V",
+    "F",
+    "Q"
+  ]
+}

@@ -37,6 +37,7 @@ def pick_segments(ds, per_class: dict[str, int]) -> list[tuple[int, int, str]]:
             cands.append((rec, start, counts))
     chosen: list[tuple[int, int, str]] = []
     used: set[int] = set()
+    taken: dict[str, int] = {}
     for cls, k in per_class.items():
         ci = AAMI_CLASSES.index(cls)
         if cls == "N":
@@ -44,13 +45,14 @@ def pick_segments(ds, per_class: dict[str, int]) -> list[tuple[int, int, str]]:
         else:
             ranked = sorted(cands, key=lambda c: (-c[2][ci], c[0], c[1]))
         for rec, start, counts in ranked:
-            if len([1 for r, _, lab in chosen if lab.startswith(cls)]) >= k:
+            if taken.get(cls, 0) >= k:
                 break
             if rec in used or (cls != "N" and counts[ci] == 0):
                 continue
             present = ", ".join(f"{AAMI_CLASSES[j]}x{int(n)}" for j, n in enumerate(counts) if n)
             chosen.append((rec, start, f"{cls}-rich ({present})" if cls != "N" else f"normal rhythm ({present})"))
             used.add(rec)
+            taken[cls] = taken.get(cls, 0) + 1
     return chosen
 
 

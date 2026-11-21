@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>On-Device ECG Arrhythmia Classifier</title>
+<meta name="description" content="1D-CNN ECG arrhythmia classifier on MIT-BIH with int8 post-training quantization and LiteRT on-device deployment - live in-browser int8 demo, inter-patient results and benchmarks.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #fcfcfb; --surface: #ffffff; --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #7a7974;
+  --line: #e4e3df; --accent: #2a78d6; --warn-bg: #fff6e5; --warn-line: #eda100;
+  --c-N: #2a78d6; --c-S: #eb6834; --c-V: #1baf7a; --c-F: #c98500; --c-Q: #d55181;
+  --trace: #52514e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1a1a19; --surface: #222221; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+    --line: #3a3a37; --accent: #3987e5; --warn-bg: #2d2615; --warn-line: #c98500;
+    --c-N: #3987e5; --c-S: #d95926; --c-V: #199e70; --c-F: #c98500; --c-Q: #d55181; --trace: #c3c2b7;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1a1a19; --surface: #222221; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+  --line: #3a3a37; --accent: #3987e5; --warn-bg: #2d2615; --warn-line: #c98500;
+  --c-N: #3987e5; --c-S: #d95926; --c-V: #199e70; --c-F: #c98500; --c-Q: #d55181; --trace: #c3c2b7;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+p, li { color: var(--ink-2); }
+strong { color: var(--ink); }
+a { color: var(--accent); }
+code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: color-mix(in srgb, var(--line) 50%, transparent); padding: 1px 5px; border-radius: 4px; }
+.lede { font-size: 1.08rem; max-width: 760px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.pills a { text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 0.9rem; color: var(--ink); background: var(--surface); }
+.pills a:hover { border-color: var(--accent); }
+.disclaimer { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 10px 14px; border-radius: 6px; margin: 16px 0; color: var(--ink); font-size: 0.95rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { color: var(--ink-2); font-weight: 600; background: color-mix(in srgb, var(--line) 35%, transparent); }
+tr:last-child td { border-bottom: 0; }
+figure { margin: 16px 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fcfcfb; }
+figcaption { font-size: 0.85rem; color: var(--ink-3); margin-top: 4px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+select, button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%; }
+button { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: wait; }
+#ecg { width: 100%; height: 220px; display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.85rem; color: var(--ink-2); margin: 6px 0; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--c); vertical-align: -1px; }
+#status { font-size: 0.9rem; color: var(--ink-2); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 12px 0; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.stat b { display: block; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat small { color: var(--ink-3); }
+.ok { color: var(--c-V); } .bad { color: var(--c-S); }
+footer { margin-top: 56px; font-size: 0.85rem; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<main>
+  <h1>On-Device ECG Arrhythmia Classifier</h1>
+  <p class="lede">A compact 1D-CNN + RR-interval model trained on MIT-BIH, quantised to <strong>full-integer int8</strong> with post-training quantisation and deployed with <strong>LiteRT</strong>. Evaluated the honest way: on <strong>patients the model never saw</strong>.</p>
+  <div class="pills">
+    <a href="https://github.com/nikhil3495/ECG-Arrhythmia-Classifier">GitHub repo</a>
+    <a href="https://github.com/nikhil3495/ECG-Arrhythmia-Classifier/blob/main/docs/REPORT.md">Technical report</a>
+    <a href="https://github.com/nikhil3495/ECG-Arrhythmia-Classifier/releases/tag/v1.0.0">Models (v1.0.0 release)</a>
+    <a href="https://github.com/nikhil3495/ECG-Arrhythmia-Classifier/blob/main/docs/DECISIONS.md">Decision log</a>
+  </div>
+  <div class="disclaimer"><strong>Medical disclaimer:</strong> research and education only. Not a medical device, not clinically validated, and not for diagnosis or treatment decisions.</div>
+
+  <div class="card">
+<!-- BEGIN:headline -->
+<p>Best model (<strong>tiny</strong>, chosen on validation): full-integer <strong>int8 LiteRT, 21.7 KB</strong>, <strong>macro-F1 0.585</strong> (N,S,V,F) and accuracy 0.891 on 49,668 beats from 22 <em>unseen</em> patients (DS2); <strong>2.1x smaller</strong> than its FP32 .tflite with a macro-F1 change of -0.0013; p50 single-beat latency <strong>0.008 ms</strong> (Desktop x86_64 CPU (12th Gen Intel(R) Core(TM) i5-12500H), 1 thread, batch 1 - NOT a phone).</p>
+<!-- END:headline -->
+  </div>
+
+  <h2 id="demo">Live demo - int8 LiteRT running in your browser</h2>
+  <p>The page below downloads the same <code>ecg_int8.tflite</code> file that is benchmarked in the repo and runs it with <a href="https://ai.google.dev/edge/litert/web">LiteRT.js</a> (WebAssembly, CPU). Segments are 10 s of MLII lead from DS2 test patients. Each browser prediction is checked against the Python LiteRT output for the same input.</p>
+  <div class="card">
+    <div class="controls">
+      <select id="seg" aria-label="ECG segment"></select>
+      <button id="run" disabled>Classify beats</button>
+      <span id="status">Loading LiteRT.js runtime...</span>
+    </div>
+    <canvas id="ecg" aria-label="ECG trace with predicted beat classes"></canvas>
+    <div class="legend">
+      <span style="--c: var(--c-N)">N normal</span><span style="--c: var(--c-S)">S supraventricular</span><span style="--c: var(--c-V)">V ventricular</span><span style="--c: var(--c-F)">F fusion</span><span style="--c: var(--c-Q)">Q unknown</span><span>&#x2717; = differs from cardiologist label</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="table-wrap"><table id="beats"><thead><tr><th>#</th><th>t (s)</th><th>True</th><th>Pred</th><th>p(N)</th><th>p(S)</th><th>p(V)</th><th>p(F)</th><th>p(Q)</th><th>Matches Python</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <h2>Headline - best variant, inter-patient DS2</h2>
+<!-- BEGIN:headline_table -->
+<div class="table-wrap"><table><thead><tr><th>Model</th><th>Size (KB)</th><th>Accuracy</th><th>Macro-F1 (N,S,V,F)</th><th>F1 N</th><th>F1 S</th><th>F1 V</th><th>F1 F</th><th>p50 latency (ms)</th></tr></thead><tbody><tr><td>tiny - PyTorch FP32</td><td>39.4</td><td>0.882</td><td>0.586</td><td>0.937</td><td>0.517</td><td>0.875</td><td>0.017</td><td>0.120</td></tr><tr><td>tiny - LiteRT FP32</td><td>45.8</td><td>0.882</td><td>0.586</td><td>0.937</td><td>0.517</td><td>0.875</td><td>0.017</td><td>0.013</td></tr><tr><td>tiny - LiteRT int8 (full-integer)</td><td>21.7</td><td>0.891</td><td>0.585</td><td>0.942</td><td>0.513</td><td>0.872</td><td>0.012</td><td>0.008</td></tr></tbody></table></div>
+<!-- END:headline_table -->
+<!-- BEGIN:per_class_table -->
+<div class="table-wrap"><table><thead><tr><th>Class</th><th>Support</th><th>Precision (PPV)</th><th>Recall (Se)</th><th>F1</th></tr></thead><tbody><tr><td>N</td><td>44,218</td><td>0.987</td><td>0.901</td><td>0.942</td></tr><tr><td>S</td><td>1,836</td><td>0.372</td><td>0.827</td><td>0.513</td></tr><tr><td>V</td><td>3,219</td><td>0.861</td><td>0.884</td><td>0.872</td></tr><tr><td>F</td><td>388</td><td>0.007</td><td>0.036</td><td>0.012</td></tr><tr><td>Q</td><td>7</td><td>0.000</td><td>0.000</td><td>0.000</td></tr></tbody></table></div>
+<!-- END:per_class_table -->
+  <div class="grid2">
+    <figure><img src="figures/confusion_int8_best.png" alt="Confusion matrix of the int8 model on DS2" loading="lazy"><figcaption>Row-normalised confusion matrix, int8 LiteRT, DS2.</figcaption></figure>
+    <figure><img src="figures/per_class_f1.png" alt="Per-class F1 for PyTorch FP32, LiteRT FP32 and LiteRT int8" loading="lazy"><figcaption>Per-class F1 is preserved through conversion and quantisation.</figcaption></figure>
+  </div>
+
+  <h2>Accuracy vs model size vs latency</h2>
+  <div class="grid2">
+    <figure><img src="figures/f1_vs_size.png" alt="Macro-F1 versus model size" loading="lazy"><figcaption>Macro-F1 vs file size, three widths x four runtimes.</figcaption></figure>
+    <figure><img src="figures/f1_vs_latency.png" alt="Macro-F1 versus latency" loading="lazy"><figcaption>Macro-F1 vs p50 single-beat latency (desktop x86 CPU, 1 thread).</figcaption></figure>
+  </div>
+<!-- BEGIN:hardware -->
+<p>Latency measured on <strong>12th Gen Intel(R) Core(TM) i5-12500H</strong> (x86_64, Linux 6.18.33.2-microsoft-standard-WSL2, WSL2), Python 3.12.15, <strong>1 thread, batch 1</strong>, 100 warm-up + 1000 timed runs. This is <strong>desktop x86 CPU latency, not phone latency</strong> - see <a href="https://github.com/nikhil3495/ECG-Arrhythmia-Classifier/blob/main/scripts/android_benchmark.md"><code>scripts/android_benchmark.md</code></a> for on-device measurement.</p>
+<!-- END:hardware -->
+<!-- BEGIN:results_table -->
+<div class="table-wrap"><table><thead><tr><th>Variant</th><th>Runtime</th><th>Params</th><th>Size (KB)</th><th>Accuracy</th><th>Macro-F1</th><th>F1 N</th><th>F1 S</th><th>F1 V</th><th>F1 F</th><th>p50 (ms)</th><th>p95 (ms)</th><th>Beats/s</th></tr></thead><tbody><tr><td><strong>tiny</strong></td><td>PyTorch FP32</td><td>7,285</td><td>39.4</td><td>0.882</td><td>0.586</td><td>0.937</td><td>0.517</td><td>0.875</td><td>0.017</td><td>0.120</td><td>0.166</td><td>7,917</td></tr><tr><td><strong>tiny</strong></td><td>LiteRT FP32</td><td>7,285</td><td>45.8</td><td>0.882</td><td>0.586</td><td>0.937</td><td>0.517</td><td>0.875</td><td>0.017</td><td>0.013</td><td>0.014</td><td>74,816</td></tr><tr><td><strong>tiny</strong></td><td>LiteRT int8 (full-integer)</td><td>7,285</td><td>21.7</td><td>0.891</td><td>0.585</td><td>0.942</td><td>0.513</td><td>0.872</td><td>0.012</td><td>0.008</td><td>0.009</td><td>116,881</td></tr><tr><td><strong>tiny</strong></td><td>LiteRT int8 (dynamic-range)</td><td>7,285</td><td>17.1</td><td>0.879</td><td>0.582</td><td>0.935</td><td>0.503</td><td>0.872</td><td>0.016</td><td>0.009</td><td>0.013</td><td>86,777</td></tr><tr><td>small</td><td>PyTorch FP32</td><td>28,389</td><td>122.3</td><td>0.793</td><td>0.557</td><td>0.879</td><td>0.447</td><td>0.887</td><td>0.012</td><td>0.152</td><td>0.210</td><td>6,284</td></tr><tr><td>small</td><td>LiteRT FP32</td><td>28,389</td><td>128.4</td><td>0.793</td><td>0.557</td><td>0.879</td><td>0.447</td><td>0.887</td><td>0.012</td><td>0.037</td><td>0.045</td><td>26,553</td></tr><tr><td>small</td><td>LiteRT int8 (full-integer)</td><td>28,389</td><td>44.8</td><td>0.798</td><td>0.557</td><td>0.883</td><td>0.444</td><td>0.891</td><td>0.010</td><td>0.015</td><td>0.020</td><td>59,944</td></tr><tr><td>small</td><td>LiteRT int8 (dynamic-range)</td><td>28,389</td><td>39.0</td><td>0.792</td><td>0.555</td><td>0.879</td><td>0.442</td><td>0.888</td><td>0.012</td><td>0.020</td><td>0.021</td><td>51,102</td></tr><tr><td>base</td><td>PyTorch FP32</td><td>112,069</td><td>450.3</td><td>0.933</td><td>0.632</td><td>0.969</td><td>0.642</td><td>0.874</td><td>0.044</td><td>0.251</td><td>0.312</td><td>3,851</td></tr><tr><td>base</td><td>LiteRT FP32</td><td>112,069</td><td>455.7</td><td>0.933</td><td>0.632</td><td>0.969</td><td>0.642</td><td>0.874</td><td>0.044</td><td>0.121</td><td>0.143</td><td>8,038</td></tr><tr><td>base</td><td>LiteRT int8 (full-integer)</td><td>112,069</td><td>131.4</td><td>0.928</td><td>0.632</td><td>0.966</td><td>0.647</td><td>0.873</td><td>0.043</td><td>0.038</td><td>0.049</td><td>24,886</td></tr><tr><td>base</td><td>LiteRT int8 (dynamic-range)</td><td>112,069</td><td>123.4</td><td>0.932</td><td>0.633</td><td>0.968</td><td>0.644</td><td>0.875</td><td>0.044</td><td>0.047</td><td>0.058</td><td>21,218</td></tr></tbody></table></div>
+<!-- END:results_table -->
+
+  <h2>Quantisation findings</h2>
+<!-- BEGIN:quant_findings -->
+<ul><li><strong>Size:</strong> int8 files are 2.1-3.5x smaller than FP32 .tflite (tiny: 45.8 KB -&gt; 21.7 KB).</li><li><strong>Accuracy:</strong> macro-F1 change after int8 PTQ ranges -0.0013 to +0.0003 across variants (tiny: -0.0013).</li><li><strong>Speed (host CPU):</strong> tiny int8 is 1.54x the speed of LiteRT FP32 and 14.2x the speed of eager PyTorch at batch 1.</li><li><strong>Parity:</strong> FP32 .tflite predictions agree with PyTorch on 100.00% of DS2 beats (minimum over variants; requirement &gt; 99.9%); full-integer int8 agreement is 98.32%-99.12%.</li></ul>
+<!-- END:quant_findings -->
+<!-- BEGIN:quant_table -->
+<div class="table-wrap"><table><thead><tr><th>Variant</th><th>FP32 -&gt; int8 size</th><th>Macro-F1 delta</th><th>Accuracy delta</th><th>Speed-up vs LiteRT FP32</th><th>Speed-up vs PyTorch</th><th>FP32 .tflite agreement w/ PyTorch</th><th>int8 agreement w/ PyTorch</th></tr></thead><tbody><tr><td>tiny</td><td>2.11x smaller</td><td>-0.0013</td><td>+0.0091</td><td>1.54x</td><td>14.2x</td><td>100.00%</td><td>98.32%</td></tr><tr><td>small</td><td>2.87x smaller</td><td>+0.0003</td><td>+0.0058</td><td>2.40x</td><td>10.0x</td><td>100.00%</td><td>98.54%</td></tr><tr><td>base</td><td>3.47x smaller</td><td>-0.0002</td><td>-0.0053</td><td>3.18x</td><td>6.6x</td><td>100.00%</td><td>99.12%</td></tr></tbody></table></div>
+<!-- END:quant_table -->
+  <figure><img src="figures/fp32_vs_int8.png" alt="FP32 vs int8 size, F1 and latency" loading="lazy"><figcaption>LiteRT FP32 vs full-integer int8 for each width.</figcaption></figure>
+
+  <h2>Why inter-patient evaluation</h2>
+  <p>Most MIT-BIH repositories shuffle all beats and split randomly, reporting ~99% accuracy. Beats from the same person then appear in both train and test, so the score measures memorisation of a patient's morphology rather than generalisation to a new wearer. This project trains on the 22 DS1 records and tests on the 22 disjoint DS2 records (de Chazal et al., 2004), excluding paced records per AAMI EC57.</p>
+<!-- BEGIN:protocol_text -->
+<p>The identical architecture scores macro-F1 <strong>0.863</strong> on a random beat-level split but <strong>0.586</strong> on unseen patients - a gap of 0.276. The random split lets the network memorise each patient's beat morphology, because neighbouring beats of the same person sit in both train and test.</p>
+<!-- END:protocol_text -->
+<!-- BEGIN:protocol_table -->
+<div class="table-wrap"><table><thead><tr><th>Protocol (same architecture, PyTorch FP32)</th><th>Test beats</th><th>Accuracy</th><th>Macro-F1 (N,S,V,F)</th><th>F1 N</th><th>F1 S</th><th>F1 V</th><th>F1 F</th></tr></thead><tbody><tr><td><strong>Inter-patient</strong> (DS1 -&gt; DS2, unseen patients)</td><td>49,668</td><td>0.882</td><td>0.586</td><td>0.937</td><td>0.517</td><td>0.875</td><td>0.017</td></tr><tr><td>Intra-patient random 80/20 split (leaky, optimistic)</td><td>20,129</td><td>0.979</td><td>0.863</td><td>0.989</td><td>0.842</td><td>0.963</td><td>0.656</td></tr></tbody></table></div>
+<!-- END:protocol_table -->
+  <figure><img src="figures/inter_vs_intra.png" alt="Inter- vs intra-patient per-class F1" loading="lazy"><figcaption>Same architecture, two protocols.</figcaption></figure>
+
+  <h2>Data</h2>
+<!-- BEGIN:data_table -->
+<div class="table-wrap"><table><thead><tr><th>Split</th><th>Records</th><th>Beats</th><th>N</th><th>S</th><th>V</th><th>F</th><th>Q</th></tr></thead><tbody><tr><td>train</td><td>18</td><td>41,257</td><td>37,232</td><td>769</td><td>2,855</td><td>399</td><td>2</td></tr><tr><td>val</td><td>4</td><td>9,720</td><td>8,592</td><td>174</td><td>933</td><td>15</td><td>6</td></tr><tr><td>test</td><td>22</td><td>49,668</td><td>44,218</td><td>1,836</td><td>3,219</td><td>388</td><td>7</td></tr></tbody></table></div>
+<!-- END:data_table -->
+
+  <footer>
+    Data: MIT-BIH Arrhythmia Database (Moody &amp; Mark, 2001) via PhysioNet (Goldberger et al., 2000), ODC-By 1.0. Code: MIT licence.
+    All numbers on this page are generated from <code>results/*.json</code> by <code>scripts/update_docs.py</code>.
+  </footer>
+</main>
+
+<script type="module">
+const LITERT = "https://cdn.jsdelivr.net/npm/@litertjs/core@2.6.0";
+const CLASSES = ["N", "S", "V", "F", "Q"];
+const $ = (id) => document.getElementById(id);
+const status = (t) => { $("status").textContent = t; };
+let data, model, inputOrder, lastPreds = null;
+
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// numpy-compatible round-half-to-even so browser quantisation matches Python bit-for-bit
+function roundEven(x) { const r = Math.round(x); return (Math.abs(x % 1) === 0.5 && r % 2 !== 0) ? r - 1 : r; }
+function quantize(values, q) {
+  const out = new Int8Array(values.length);
+  for (let i = 0; i < values.length; i++) {
+    out[i] = Math.max(-128, Math.min(127, roundEven(values[i] / q.scale) + q.zero_point));
+  }
+  return out;
+}
+function softmax(z) { const m = Math.max(...z); const e = z.map((v) => Math.exp(v - m)); const s = e.reduce((a, b) => a + b, 0); return e.map((v) => v / s); }
+
+function drawEcg(seg, preds) {
+  const cv = $("ecg"), dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+  const sig = seg.signal, n = sig.length, top = 26, bot = h - 18;
+  const lo = Math.min(...sig), hi = Math.max(...sig);
+  const X = (i) => (i / (n - 1)) * (w - 8) + 4, Y = (v) => bot - ((v - lo) / (hi - lo || 1)) * (bot - top);
+  seg.beats.forEach((b, k) => {
+    if (!preds) return;
+    const c = CLASSES[preds[k]];
+    ctx.fillStyle = cssVar(`--c-${c}`); ctx.globalAlpha = 0.18; ctx.fillRect(X(b.pos) - 4, top - 4, 8, bot - top + 4); ctx.globalAlpha = 1;
+    ctx.font = "600 12px system-ui"; ctx.textAlign = "center";
+    ctx.fillText(c + (preds[k] === b.y ? "" : "✗"), X(b.pos), 14);
+  });
+  ctx.strokeStyle = cssVar("--trace"); ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let i = 0; i < n; i++) { const x = X(i), y = Y(sig[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke();
+  ctx.fillStyle = cssVar("--ink-3"); ctx.font = "11px system-ui"; ctx.textAlign = "left";
+  for (let s = 0; s <= 10; s += 2) ctx.fillText(`${s}s`, X(s * data.fs) + 2, h - 4);
+}
+
+async function classify() {
+  const { Tensor } = await import(`${LITERT}/+esm`);
+  const seg = data.segments[+$("seg").value];
+  $("run").disabled = true; lastPreds = null; status("Running int8 model...");
+  const preds = [], probs = [], times = [];
+  let matches = 0;
+  for (const b of seg.beats) {
+    const feeds = { beat: new Tensor(quantize(b.x, data.quant.beat), data.quant.beat.shape),
+                    rr: new Tensor(quantize(b.rr, data.quant.rr), data.quant.rr.shape) };
+    const inputs = inputOrder.map((k) => feeds[k]);
+    const t0 = performance.now();
+    const outs = await model.run(inputs);
+    times.push(performance.now() - t0);
+    let out = outs[0];
+    let raw;
+    try { raw = out.toTypedArray(); } catch (e) { const moved = await out.moveTo("wasm"); raw = moved.toTypedArray(); moved.delete(); }
+    const logits = Array.from(raw, (v) => (v - data.quant.out.zero_point) * data.quant.out.scale);
+    const p = softmax(logits); const pred = p.indexOf(Math.max(...p));
+    preds.push(pred); probs.push(p); if (pred === b.ref_pred) matches++;
+    inputs.forEach((t) => t.delete()); outs.forEach((t) => t.delete());
+  }
+  lastPreds = preds;
+  drawEcg(seg, preds);
+  const tbody = $("beats").querySelector("tbody"); tbody.innerHTML = "";
+  seg.beats.forEach((b, k) => {
+    const tr = document.createElement("tr");
+    const ok = preds[k] === b.ref_pred;
+    tr.innerHTML = `<td>${k + 1}</td><td>${(b.pos / data.fs).toFixed(2)}</td><td>${CLASSES[b.y]}</td><td>${CLASSES[preds[k]]}</td>` +
+      probs[k].map((v) => `<td>${v.toFixed(3)}</td>`).join("") + `<td class="${ok ? "ok" : "bad"}">${ok ? "yes" : "no"}</td>`;
+    tbody.appendChild(tr);
+  });
+  const acc = preds.filter((p, k) => p === seg.beats[k].y).length / preds.length;
+  const sorted = [...times].sort((a, b) => a - b);
+  const med = sorted[Math.floor(sorted.length / 2)];
+  $("stats").innerHTML =
+    `<div class="stat"><b>${preds.length}</b><small>beats classified</small></div>` +
+    `<div class="stat"><b>${(100 * acc).toFixed(0)}%</b><small>agree with reference labels</small></div>` +
+    (med > 0 ? `<div class="stat"><b>${med.toFixed(3)} ms</b><small>median model.run() per beat, in this browser</small></div>`
+            : `<div class="stat"><b>n/a</b><small>browser timer unavailable (e.g. headless capture)</small></div>`) +
+    `<div class="stat"><b class="${matches === preds.length ? "ok" : "bad"}">${matches}/${preds.length}</b><small>identical to Python LiteRT prediction</small></div>`;
+  document.body.dataset.parity = `${matches}/${preds.length}`;
+  status(`Done - ${seg.label}`); $("run").disabled = false;
+}
+
+async function init() {
+  try {
+    data = await (await fetch("demo/samples.json")).json();
+    data.segments.forEach((s, i) => {
+      const o = document.createElement("option"); o.value = i;
+      o.textContent = `Record ${s.record} @ ${Math.round(s.start_s)} s - ${s.label}`; $("seg").appendChild(o);
+    });
+    const want = parseInt(new URLSearchParams(location.search).get("seg") || "0", 10);
+    if (want >= 0 && want < data.segments.length) $("seg").value = String(want);
+    drawEcg(data.segments[+$("seg").value], null);
+    const { loadLiteRt, loadAndCompile } = await import(`${LITERT}/+esm`);
+    await loadLiteRt(`${LITERT}/wasm/`);
+    model = await loadAndCompile("demo/ecg_int8.tflite", { accelerator: "wasm" });
+    inputOrder = model.getInputDetails().map((d) => (d.shape.length === 3 ? "beat" : "rr"));
+    $("run").disabled = false;
+    status(`Model loaded (${data.variant}, int8). Click Classify.`);
+    $("run").addEventListener("click", classify);
+    $("seg").addEventListener("change", classify);
+    await classify();
+  } catch (err) {
+    console.error(err);
+    status(`Could not start LiteRT.js in this browser: ${err.message || err}`);
+    document.body.dataset.parity = "error";
+  }
+}
+window.addEventListener("resize", () => { if (data) drawEcg(data.segments[+$("seg").value], lastPreds); });
+init();
+</script>
+</body>
+</html>
