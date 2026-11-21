@@ -1,0 +1,30 @@
+# Data, model binaries and build artefacts (models are published as GitHub Release assets)
+data/
+checkpoints/
+exports/
+*.pt
+*.tflite
+*.onnx
+!app/models/*.tflite
+!docs/demo/*.tflite
+!docs/demo/*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Misc
+.DS_Store
+.env
+*.log
+gradio_cached_examples/
+.gradio/

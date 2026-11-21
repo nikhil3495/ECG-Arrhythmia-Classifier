@@ -1,0 +1,6 @@
+base: default.yaml
+model:
+  name: tiny
+  widths: [8, 16, 16, 32]
+  rr_hidden: 8
+  fc_hidden: 16

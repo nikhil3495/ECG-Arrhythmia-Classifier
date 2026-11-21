@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecg-edge"
+version = "1.0.0"
+description = "1D-CNN ECG arrhythmia classifier on MIT-BIH with int8 post-training quantization and LiteRT on-device deployment"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Nikhil Bansiwal" }]
+requires-python = ">=3.11,<3.14"
+keywords = ["ecg", "arrhythmia", "pytorch", "litert", "tflite", "quantization", "edge-ml", "mit-bih", "tinyml"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# Pinned to the versions the published results were produced with (see requirements.txt for the full lock).
+dependencies = [
+    "numpy==2.5.5",
+    "scipy==1.18.1",
+    "scikit-learn==1.9.1",
+    "pyyaml==6.0.4",
+    "wfdb==4.3.1",
+    "torch==2.14.1",
+    "matplotlib==3.11.2",
+    "ai-edge-litert==2.3.0",
+]
+
+[project.optional-dependencies]
+export = ["litert-torch==0.10.0", "ai-edge-quantizer==0.10.1"]
+app = ["gradio==6.32.0"]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.6",
+    "black==26.10.1",
+    "nbconvert",
+    "nbformat",
+    "ipykernel",
+]
+
+[project.urls]
+Repository = "https://github.com/nikhil3495/ECG-Arrhythmia-Classifier"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "D", "SIM", "RUF"]
+ignore = ["D105", "D107", "D203", "D213", "N812", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"scripts/*" = ["D"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::SyntaxWarning"]

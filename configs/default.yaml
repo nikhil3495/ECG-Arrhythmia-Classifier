@@ -1,0 +1,45 @@
+# Shared configuration. Variant configs (tiny/small/base) set `base: default.yaml` and override `model`.
+seed: 42
+
+data:
+  lead: MLII
+  before: 90          # samples before the R-peak (0.25 s @ 360 Hz)
+  after: 166          # samples after the R-peak (~0.46 s) -> 256-sample window
+  filter:
+    low_hz: 0.5
+    high_hz: 40.0
+    order: 3
+  # Patient-wise validation hold-out drawn from DS1 (chosen to contain S, V and F beats while
+  # keeping the S-heavy record 209 and F-heavy record 208 in training; see docs/DECISIONS.md).
+  val_records: [101, 118, 203, 223]
+
+model:
+  name: small
+  widths: [16, 32, 32, 64]
+  kernel_size: 7
+  rr_hidden: 16
+  fc_hidden: 32
+  dropout: 0.2
+
+train:
+  protocol: inter        # inter | intra
+  batch_size: 256
+  epochs: 40
+  patience: 8            # early stopping on val macro-F1 (N,S,V,F)
+  lr: 0.002
+  weight_decay: 0.0001
+  class_weight_power: 0.5  # loss weight_c = (n_max / n_c) ** power, i.e. sqrt-inverse frequency
+  max_class_weight: 50.0
+  augment:
+    scale: 0.15          # random amplitude scale in [1-s, 1+s]
+    noise_std: 0.05      # additive Gaussian noise (z-normalised units)
+    shift: 5             # random circular shift in samples (+/-)
+  num_threads: 2
+
+export:
+  calibration_beats: 2000   # representative set for int8 PTQ, drawn from the TRAIN split only
+
+benchmark:
+  warmup: 100
+  runs: 1000
+  num_threads: 1
