@@ -1,0 +1,11 @@
+.venv
+data
+checkpoints
+exports
+.git
+.github
+notebooks
+results
+docs
+tests
+**/__pycache__

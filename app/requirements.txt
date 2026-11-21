@@ -1,0 +1,5 @@
+# Runtime deps for the demo (int8 LiteRT inference only).
+ai-edge-litert==2.3.0
+gradio==6.32.0
+matplotlib==3.11.2
+numpy==2.5.5
