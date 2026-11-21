@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
 
 from ecg_edge import AAMI_CLASSES, SCORED_CLASSES
 from ecg_edge.utils import FIGURES_DIR, RESULTS_DIR, get_logger, load_json
@@ -86,8 +87,11 @@ def tradeoff(bench: dict[str, Any], x_key: str, xlabel: str, name: str, title: s
         ax.plot(xs, ys, color=color, lw=2, marker=MARKERS[rt], ms=8, mec=SURFACE, mew=2, label=rows[0]["runtime_label"])
         if rt == "litert_int8":
             for r, x, y in zip(rows, xs, ys, strict=True):
-                ax.annotate(r["variant"], (x, y), xytext=(6, -12), textcoords="offset points", color=INK2, fontsize=9)
+                ax.annotate(r["variant"], (x, y), xytext=(9, -4), textcoords="offset points", color=INK2, fontsize=9)
     ax.set_xscale("log")
+    ax.xaxis.set_major_locator(LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Macro-F1 (N, S, V, F) - inter-patient DS2")
     ax.set_title(title)

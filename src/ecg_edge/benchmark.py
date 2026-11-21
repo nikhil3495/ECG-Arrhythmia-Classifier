@@ -181,7 +181,9 @@ def benchmark(cfg: dict[str, Any]) -> dict[str, Any]:
         "protocol": "inter-patient (train DS1, test DS2 = 22 unseen patients, 49,668 beats)",
         "latency_settings": {"warmup": bcfg["warmup"], "runs": bcfg["runs"], "batch": 1, "threads": threads},
         "best_variant": best,
-        "best_variant_selection": "highest mean validation F1 over N,S,V (patient-wise DS1 hold-out); test set not used",
+        "best_variant_selection": (
+            "highest mean validation F1 over N,S,V (patient-wise DS1 hold-out); test set not used"
+        ),
         "headline": {
             "variant": best,
             "runtime": "litert_int8",

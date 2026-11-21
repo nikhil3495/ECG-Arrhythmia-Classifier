@@ -20,7 +20,10 @@ def main() -> None:
         {
             "variant": best,
             "config": f"configs/{best}.yaml",
-            "selection": "highest mean validation F1 over N,S,V (same signal as early stopping) on the DS1 patient-wise hold-out",
+            "selection": (
+                "highest mean validation F1 over N,S,V (same signal as early stopping) "
+                "on the DS1 patient-wise hold-out"
+            ),
             "val_select_f1": scores,
         },
         RESULTS_DIR / "best_model.json",

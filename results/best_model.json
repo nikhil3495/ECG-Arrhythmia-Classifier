@@ -1,0 +1,10 @@
+{
+  "variant": "tiny",
+  "config": "configs/tiny.yaml",
+  "selection": "highest mean validation F1 over N,S,V (same signal as early stopping) on the DS1 patient-wise hold-out",
+  "val_select_f1": {
+    "tiny": 0.6575488030886708,
+    "small": 0.6297406675467524,
+    "base": 0.6107776598278303
+  }
+}
